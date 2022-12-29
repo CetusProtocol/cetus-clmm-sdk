@@ -1,10 +1,12 @@
 import { HexString, TxnBuilderTypes } from 'aptos'
-import { AptosResourceType, AptosStructTag } from '../types/aptos'
+import { AptosResourceType, AptosStructTag, CoinStoreAddress } from '../types/aptos'
 import { checkAddress } from './hex'
 
 const EQUAL = 0
 const LESS_THAN = 1
 const GREATER_THAN = 2
+
+const COIN_STORE_TYPE_ARG_REGEX = /^0x1::coin::CoinStore<(.+)>$/
 
 function cmp(a: number, b: number) {
   if (a === b) {
@@ -108,6 +110,15 @@ export function extractStructTagFromType(type: string): AptosStructTag {
     type_arguments: [],
   }
   return structTag
+}
+
+export function getCoinTypeArg(type: string) {
+  const res = type.match(COIN_STORE_TYPE_ARG_REGEX)
+  return res ? res[1] : ''
+}
+
+export function getCoinTypeFromArg(coinTypeArg: string) {
+  return `${CoinStoreAddress}<${coinTypeArg}>`
 }
 
 export function checkAptosType(type: any, options: { leadingZero: boolean } = { leadingZero: true }): boolean {

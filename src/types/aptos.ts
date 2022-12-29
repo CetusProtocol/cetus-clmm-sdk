@@ -1,3 +1,4 @@
+import { LaunchpadPool, FixedPricePoolState } from '../modules/launchpadModule'
 import { TokenInfo } from '../modules/tokenModule'
 import { CoinInfo, CoinStore, GlobalConfig, Pool, PoolState, Position } from '../modules/resourcesModule'
 import Decimal from '../utils/decimal'
@@ -18,12 +19,20 @@ export const PoolsStruct = 'Pools'
 export const PoolLpModule = 'pool'
 export const PoolLpStruct = 'Pool'
 export const ScriptsModule = 'scripts'
+
+export const LaunchpadPoolLpModule = 'pool'
+export const LaunchpadPoolLpStruct = 'CrowdsalePool'
+export const LaunchpadRouterModule = 'router'
+export const LaunchpadPoolLiquidityCoinType = 'cscoin'
+
 export type AptosCacheResource =
   | AptosResource
   | CoinInfo[]
   | CoinStore[]
   | Pool[]
   | PoolState
+  | LaunchpadPool[]
+  | FixedPricePoolState
   | Position
   | Position[]
   | number

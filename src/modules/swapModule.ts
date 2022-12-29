@@ -19,6 +19,7 @@ import { d } from '../utils/numbers'
 import { SwapUtils } from '../math/swap'
 import { computeSwap } from '../math/clmm'
 import { TickMath } from '../math/tick'
+import { Pool } from './resourcesModule'
 
 export const AMM_SWAP_MODULE = 'amm_swap'
 export const POOL_STRUCT = 'Pool'
@@ -29,13 +30,13 @@ export type createTestTransferTxPayloadParams = {
 }
 
 export type CalculateRatesParams = {
-  pool: string
   decimalsA: number
   decimalsB: number
   a2b: boolean
   byAmountIn: boolean
   amount: BN
   swapTicks: Array<TickData>
+  currentPool: Pool
 }
 
 export type CalculateRatesResult = {
@@ -104,9 +105,9 @@ export class SwapModule implements IModule {
     return data
   }
 
-  async calculateRates(params: CalculateRatesParams): Promise<CalculateRatesResult> {
-    const currentPool: any = await this.sdk.Resources.getPool(params.pool)
-
+  /* eslint-disable class-methods-use-this */
+  calculateRates(params: CalculateRatesParams): CalculateRatesResult {
+    const { currentPool } = params
     const poolData: ClmmpoolData = {
       coinA: currentPool.coinTypeA, // string
       coinB: currentPool.coinTypeB, // string

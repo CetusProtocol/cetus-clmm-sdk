@@ -25,6 +25,15 @@ export interface CoinProvider {
   tokens: CoinNode[]
 }
 
+export type PriceAndPath = {
+  price: Decimal
+  nodes: string[]
+}
+
+export type PriceResult = {
+  pools: string[]
+} & PriceAndPath
+
 function _pairSymbol(
   base: string,
   quote: string
@@ -51,6 +60,8 @@ export class RouterModule implements IModule {
 
   private _coinAddressMapping: Map<string, CoinNode>
 
+  private poolMapping: Map<string, string>
+
   protected _sdk: SDK
 
   constructor(sdk: SDK) {
@@ -60,11 +71,36 @@ export class RouterModule implements IModule {
     this._rates = new Map()
     this._coinSymbolMapping = new Map()
     this._coinAddressMapping = new Map()
+    this.poolMapping = new Map()
     this._sdk = sdk
   }
 
   get sdk() {
     return this._sdk
+  }
+
+  async setPoolMap() {
+    const pools = await this._sdk.Resources.getPools()
+    pools.forEach((v) => {
+      const coinA: any = this._coinAddressMapping.get(v.coinTypeA)
+      const coinB: any = this._coinAddressMapping.get(v.coinTypeB)
+      if (coinA !== undefined && coinB !== undefined) {
+        const poolSymbol = _pairSymbol(coinA.symbol, coinB.symbol).pair
+        this.poolMapping.set(poolSymbol, v.poolAddress)
+      }
+    })
+  }
+
+  getPoolAddress(base: string, quote: string): string | undefined {
+    const { pair, reversePair } = _pairSymbol(base, quote)
+    if (this.poolMapping.has(pair)) {
+      return this.poolMapping.get(pair)
+    }
+
+    if (this.poolMapping.has(reversePair)) {
+      return this.poolMapping.get(reversePair)
+    }
+    return undefined
   }
 
   async loadGraph(): Promise<RouterModule> {
@@ -88,6 +124,9 @@ export class RouterModule implements IModule {
       }
     }
 
+    console.log(1111111)
+    await this.setPoolMap()
+    console.log(this.poolMapping)
     return this
   }
 
@@ -108,38 +147,69 @@ export class RouterModule implements IModule {
     return this._coinSymbolMapping.get(key)
   }
 
-  price(base: string, quote: string): Decimal | undefined {
+  price(base: string, quote: string): PriceResult | undefined {
     const baseCoin = this.tokenInfo(base)
     const quoteCoin = this.tokenInfo(quote)
     if (baseCoin === undefined || quoteCoin === undefined) {
       return undefined
     }
 
-    return this._price(baseCoin.symbol, quoteCoin.symbol)
+    const res = this._price(baseCoin.symbol, quoteCoin.symbol)
+    if (res === undefined) {
+      return undefined
+    }
+
+    const poolAddresses = []
+    for (let i = 0; i < res.nodes.length - 1; i += 1) {
+      const base = res.nodes[i]
+      const quote = res.nodes[i + 1]
+      const address = this.getPoolAddress(base, quote)
+      if (address !== undefined) {
+        poolAddresses.push(address)
+      }
+    }
+
+    return {
+      price: res.price,
+      nodes: res.nodes,
+      pools: poolAddresses,
+    }
   }
 
-  private _price(base: string, quote: string): Decimal | undefined {
+  private _price(base: string, quote: string): PriceAndPath | undefined {
     let price = this._directPrice(base, quote)
+
     if (price === undefined) {
       price = this._pathPrice(base, quote)
     }
     return price
   }
 
-  private _directPrice(base: string, quote: string): Decimal | undefined {
+  private _directPrice(base: string, quote: string): PriceAndPath | undefined {
+    const nodes = [base, quote]
     const { pair, reversePair } = _pairSymbol(base, quote)
     if (this._rates.has(pair)) {
-      return this._rates.get(pair)
+      const rate = this._rates.get(pair)
+      if (rate === undefined) {
+        return undefined
+      }
+      return {
+        price: rate,
+        nodes,
+      }
     }
     if (this._rates.has(reversePair)) {
       const price = this._rates.get(reversePair)
       invariant(price !== undefined)
-      return new Decimal(1).div(price)
+      return {
+        price: new Decimal(1).div(price),
+        nodes,
+      }
     }
     return undefined
   }
 
-  private _pathPrice(base: string, quote: string): Decimal | undefined {
+  private _pathPrice(base: string, quote: string): PriceAndPath | undefined {
     if (!this.graph.hasNode(base) || !this.graph.hasNode(quote)) {
       return undefined
     }
@@ -148,15 +218,23 @@ export class RouterModule implements IModule {
       return undefined
     }
     let price = new Decimal(1)
+
+    const nodes = []
+
     for (let i = 0; i < path.length - 1; i += 1) {
+      nodes.push(path[i]?.id.toString())
       const base = path[i]?.id.toString()
       const quote = path[i + 1]?.id.toString()
       invariant(base !== undefined && quote !== undefined, 'base of quote is undefined')
       const tempPrice = this._directPrice(base, quote)
       invariant(tempPrice !== undefined, `[${base}-${quote}] temp price is undefined`)
-      price = price.mul(tempPrice)
+      price = price.mul(tempPrice.price)
     }
-    return price
+    nodes.push(path[path.length - 1]?.id.toString())
+    return {
+      price,
+      nodes,
+    }
   }
 
   swap(base: string, quote: string, amount: Decimal): Decimal | undefined {
@@ -173,7 +251,7 @@ export class RouterModule implements IModule {
     if (price === undefined) {
       return undefined
     }
-    return amount.mul(price)
+    return amount.mul(price.price)
   }
 
   lamportsSwap(base: string, quote: string, lamports: Decimal): Decimal | undefined {

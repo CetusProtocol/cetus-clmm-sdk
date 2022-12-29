@@ -56,8 +56,8 @@ export function collectFeesQuote(param: CollectFeesQuoteParam): CollectFeesQuote
   let feeGrowthBelowBX64: BN | null = null
 
   if (currentTickIndex < Number(tickLowerIndex)) {
-    feeGrowthBelowAX64 = MathUtil.subUnderflowU128(new BN(feeGrowthGlobalAX64), tickLowerFeeGrowthOutsideAX64)
-    feeGrowthBelowBX64 = MathUtil.subUnderflowU128(new BN(feeGrowthGlobalBX64), tickLowerFeeGrowthOutsideBX64)
+    feeGrowthBelowAX64 = MathUtil.subUnderflowU128(new BN(feeGrowthGlobalAX64), new BN(tickLowerFeeGrowthOutsideAX64))
+    feeGrowthBelowBX64 = MathUtil.subUnderflowU128(new BN(feeGrowthGlobalBX64), new BN(tickLowerFeeGrowthOutsideBX64))
   } else {
     feeGrowthBelowAX64 = tickLowerFeeGrowthOutsideAX64
     feeGrowthBelowBX64 = tickLowerFeeGrowthOutsideBX64
@@ -70,8 +70,8 @@ export function collectFeesQuote(param: CollectFeesQuoteParam): CollectFeesQuote
     feeGrowthAboveAX64 = tickUpperFeeGrowthOutsideAX64
     feeGrowthAboveBX64 = tickUpperFeeGrowthOutsideBX64
   } else {
-    feeGrowthAboveAX64 = MathUtil.subUnderflowU128(new BN(feeGrowthGlobalAX64), tickUpperFeeGrowthOutsideAX64)
-    feeGrowthAboveBX64 = MathUtil.subUnderflowU128(new BN(feeGrowthGlobalBX64), tickUpperFeeGrowthOutsideBX64)
+    feeGrowthAboveAX64 = MathUtil.subUnderflowU128(new BN(feeGrowthGlobalAX64), new BN(tickUpperFeeGrowthOutsideAX64))
+    feeGrowthAboveBX64 = MathUtil.subUnderflowU128(new BN(feeGrowthGlobalBX64), new BN(tickUpperFeeGrowthOutsideBX64))
   }
 
   const feeGrowthInsideAX64 = MathUtil.subUnderflowU128(
@@ -84,8 +84,12 @@ export function collectFeesQuote(param: CollectFeesQuoteParam): CollectFeesQuote
   )
 
   // Calculate the updated fees owed
-  const feeOwedADelta = MathUtil.subUnderflowU128(feeGrowthInsideAX64, new BN(feeGrowthCheckpointAX64)).mul(new BN(liquidity)).shrn(64)
-  const feeOwedBDelta = MathUtil.subUnderflowU128(feeGrowthInsideBX64, new BN(feeGrowthCheckpointBX64)).mul(new BN(liquidity)).shrn(64)
+  const feeOwedADelta = MathUtil.subUnderflowU128(new BN(feeGrowthInsideAX64), new BN(feeGrowthCheckpointAX64))
+    .mul(new BN(liquidity))
+    .shrn(64)
+  const feeOwedBDelta = MathUtil.subUnderflowU128(new BN(feeGrowthInsideBX64), new BN(feeGrowthCheckpointBX64))
+    .mul(new BN(liquidity))
+    .shrn(64)
 
   const updatedFeeOwedA = new BN(d(feeOwedA).add(d(feeOwedADelta.toNumber())).toNumber())
   const updatedFeeOwedB = new BN(d(feeOwedB).add(d(feeOwedBDelta.toNumber())).toNumber())

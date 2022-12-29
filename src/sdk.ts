@@ -8,12 +8,17 @@ import { RewarderModule } from './modules/rewarderModule'
 import { TokenModule } from './modules/tokenModule'
 import { RouterModule } from './modules/routerModule'
 import { FetcherModule } from './modules/fetcherModule'
+import { LaunchpadModule } from './modules/launchpadModule'
 
 // not sure yet
 export type SdkOptions = {
   rpcUrl: string
   networkOptions: {
     nativeToken: AptosResourceType
+    launchpad: {
+      cetusLaunchpad: AptosResourceType
+      crowdCoin: AptosResourceType
+    }
     modules: {
       LiquidswapDeployer: AptosResourceType
       ClmmIntegrate: AptosResourceType
@@ -44,6 +49,8 @@ export class SDK {
 
   protected _fetcher: FetcherModule
 
+  protected _launchpad: LaunchpadModule
+
   protected _sdkOptions: SdkOptions
 
   private globalConfig: GlobalConfig = {
@@ -63,6 +70,7 @@ export class SDK {
     this._router = new RouterModule(this)
     this._token = new TokenModule(this)
     this._fetcher = new FetcherModule(this)
+    this._launchpad = new LaunchpadModule(this)
 
     this.globalConfig.protocol_fee_rate = ''
   }
@@ -112,6 +120,10 @@ export class SDK {
 
   get Fetcher() {
     return this._fetcher
+  }
+
+  get Launchpad() {
+    return this._launchpad
   }
 
   get sdkOptions() {

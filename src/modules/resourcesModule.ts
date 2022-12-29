@@ -4,7 +4,7 @@ import { newBits, TickData } from '../types/clmmpool'
 import { isNumber } from '../utils/numbers'
 import { hexToString } from '../utils/hex'
 import { CachedContent } from '../utils/cachedContent'
-import { composePoolLiquidityCoin, composeType } from '../utils/contracts'
+import { composePoolLiquidityCoin, composeType, getCoinTypeArg, getCoinTypeFromArg } from '../utils/contracts'
 import { isAxiosError } from '../utils/is'
 import {
   AptosCacheResource,
@@ -21,6 +21,7 @@ import {
   PoolLpStruct,
   PoolsModule,
   PoolsStruct,
+  LaunchpadPoolLiquidityCoinType,
 } from '../types/aptos'
 import { SDK } from '../sdk'
 import { IModule } from '../interfaces/IModule'
@@ -113,7 +114,7 @@ function composeCoinAddress(type: string) {
   const typeArgs = coinComplex.value.type_args
   if (typeArgs.length > 0) {
     const typeTag = typeArgs[0] as TxnBuilderTypes.TypeTagStruct
-    if (typeTag.value.name.value === PoolLiquidityCoinType) {
+    if (typeTag.value.name.value === PoolLiquidityCoinType || typeTag.value.name.value === LaunchpadPoolLiquidityCoinType) {
       coinAddress = composePoolLiquidityCoin(typeTag).lpAddress
     } else {
       coinAddress = composeType(
@@ -482,7 +483,7 @@ export class ResourcesModule implements IModule {
     const coinStoreArray: CoinStore[] = []
     resources?.forEach((r) => {
       if (r.type.startsWith(CoinStoreAddress)) {
-        const coinAddress = composeCoinAddress(r.type)
+        const coinAddress = getCoinTypeArg(r.type)
         if (coinAddress.length > 0) {
           coinStoreArray.push({
             coinAddress,
@@ -493,6 +494,22 @@ export class ResourcesModule implements IModule {
     })
     this.updateCache(cacheKey, coinStoreArray, cacheTime24h)
     return coinStoreArray
+  }
+
+  async getCoinStore(accountAddress: string, coinType: string): Promise<CoinStore | null> {
+    const resources = await this.fetchAccountResource<AptosCoinStoreResource>(accountAddress, getCoinTypeFromArg(coinType))
+
+    if (resources) {
+      const coinAddress = getCoinTypeArg(resources.type)
+      if (coinAddress.length > 0) {
+        return {
+          coinAddress,
+          ...resources.data,
+        }
+      }
+    }
+
+    return null
   }
 
   async getPositionList(accountAddress: string, pools: Pool[]) {
