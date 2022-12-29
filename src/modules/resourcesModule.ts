@@ -21,7 +21,6 @@ import {
   PoolLpStruct,
   PoolsModule,
   PoolsStruct,
-  LaunchpadPoolLiquidityCoinType,
 } from '../types/aptos'
 import { SDK } from '../sdk'
 import { IModule } from '../interfaces/IModule'
@@ -114,7 +113,7 @@ function composeCoinAddress(type: string) {
   const typeArgs = coinComplex.value.type_args
   if (typeArgs.length > 0) {
     const typeTag = typeArgs[0] as TxnBuilderTypes.TypeTagStruct
-    if (typeTag.value.name.value === PoolLiquidityCoinType || typeTag.value.name.value === LaunchpadPoolLiquidityCoinType) {
+    if (typeTag.value.name.value === PoolLiquidityCoinType) {
       coinAddress = composePoolLiquidityCoin(typeTag).lpAddress
     } else {
       coinAddress = composeType(
